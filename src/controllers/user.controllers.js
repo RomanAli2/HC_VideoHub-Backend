@@ -6,14 +6,16 @@ import  {ApiResponse} from "../utils/ApiResponse.js"
 
 const genrateAccessAndrefreshtoken=async (userId)=>{
     try {
-        const user=User.findById(userID)
+        const user= await User.findById(userId)
        const accesstoken= user.genrateAccessToken()
        const refreshtoken= user.genrateRefreshToken()
         user.refreshtoken=refreshtoken
        await user.save({validateBeforeSave:false})
+  console.log("ACCESS TOKEN:", accesstoken)
 
        return {refreshtoken,accesstoken}
     } catch (error) {
+          console.log(error)
         throw new ApiError(500,"Somthing went wrong while genrating access and refrech token")
     }
 }
@@ -86,8 +88,9 @@ console.log({
 
 const loginUser=asyncHandler(async (req,res)=>{
     const {username,email,password}=req.body
+    console.log(username,email,password)
     
-    if(!username||!email){
+    if(!(username||email)){
         throw new ApiError(400,"Email or Username is required")
     }
 
@@ -114,17 +117,23 @@ const loginUser=asyncHandler(async (req,res)=>{
     httpOnly:true,
     secure:true
   }
-  return res.status(201)
-  .cookie("accesstoken",accesstoken,option)
-  .cookie("refreshtoken",refreshtoken,option)
-
-  new ApiResponse(
-    200,{
-    user:accesstoken,refreshtoken,loggedInUser
-
-    },
-    "user loggedin successfully"
-)
+ return res
+  .status(200)
+  .cookie("accesstoken", accesstoken, option)
+  .cookie("refreshtoken", refreshtoken, option)
+  .json(
+    new ApiResponse(
+      200,
+      {
+        user: loggedInUser,
+        accesstoken,
+        refreshtoken
+      },
+      "User logged in successfully"
+    )
+    
+  );
+  console.log("LOGIN SUCCESS REACHED");
 })
 
 const logoutUser = asyncHandler(async (req,res)=>{

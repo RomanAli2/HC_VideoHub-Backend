@@ -1,13 +1,18 @@
-import { User } from "../models/user.model";
-import { ApiError } from "../utils/ApiError";
-import { asyncHandler } from "../utils/asyncHandler";
+import { User } from "../models/user.model.js";
+import { ApiError } from "../utils/ApiError.js";
+import { asyncHandler } from "../utils/asyncHandler.js";
 import jwt from "jsonwebtoken"
+import dotenv from "dotenv"
 
+dotenv.config({
+    path:'./.env'
+})
 
 export const verifyJWT=asyncHandler(async(req,res ,next)=>{
  try {
-    const token=   req.cookie?.accesstoken || req.header("Authorization")?.replace("Bearer ","")
-   
+    const token=   req.cookies?.accesstoken || req.header("Authorization")?.replace("Bearer ","")
+   console.log("COOKIES:", req.cookies)
+console.log("TOKEN:", req.cookies?.accesstoken)
        if(!token){
            throw new ApiError(401,"UnAuthrized request")
        }
