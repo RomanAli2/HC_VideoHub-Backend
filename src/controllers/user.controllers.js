@@ -3,7 +3,7 @@ import {ApiError} from "../utils/ApiError.js"
 import {User} from "../models/user.model.js"
 import {UploadOnCloudinary} from "../utils/cloudinary.js"
 import  {ApiResponse} from "../utils/ApiResponse.js"
-
+import jwt from "jsonwebtoken"
 const genrateAccessAndrefreshtoken=async (userId)=>{
     try {
         const user= await User.findById(userId)
@@ -160,4 +160,164 @@ const option={
   
 })
 
-export {registerUser,loginUser,logoutUser}
+const refreshAcesstoken=asyncHandler(async (req,res)=>{
+
+    const incomingRefreshtoken= req.cookies.refreshtoken || req.body.refreshtoken
+    if(!incomingRefreshtoken){
+        throw new ApiError(401,"unauthrized request")
+    }
+  try {
+     const decodedToken= jwt.verify(incomingRefreshtoken,process.env.REFRESH_TOKEN_SECRET)
+  
+     const user= await User.findById(decodedToken?._id)
+  
+  
+     if(!user){
+      throw new ApiError(400,'invalid refresh token')
+     }
+  
+  
+      if(incomingRefreshtoken!==user?.refreshtoken){
+      throw new ApiError(400,'refresh token is invalid or expired')
+      }
+  
+  
+  
+      const option={
+      httpOnly:true,
+      secure:true
+    }
+  
+   
+   const {accesstoken, newRefreshtoken} = await genrateAccessAndrefreshtoken(user._id)
+  
+    return res.status(200)
+    .cookie("accesstoken",accesstoken,option)
+    .cookie("refreshtoken",newRefreshtoken,option)
+    .json(
+      new ApiResponse(
+          201,{acesstoken ,refreshtoken:newRefreshtoken}
+      )
+    )
+  } catch (error) {
+    console.log(error)
+    throw new ApiError(401,error?.message||"invalid token")
+  }
+
+});
+
+const changeCurrentPassword=asyncHandler(async(req,res)=>{
+  const {oldPassword,newPassword} = req.body
+  const user = await User.findById(req.user?._id)
+  const passwordCheckCorrect= await user.isPasswordCorrect(oldPassword)
+
+  if(!passwordCheckCorrect){
+    throw new ApiError(401,"invalid password")
+  }
+
+  user.password = newPassword
+  await user.save({ validateBeforeSave:false })
+
+  return res.status(200)
+  .json(
+    new ApiResponse(200,{},"password changed successfully")
+  )
+});
+
+const getCurrentUser=asyncHandler(async(req,res)=>{
+  return res.status(200)
+  .json(200,req.user,'current user fetched successfully')
+});
+
+const accountDetailUpdate = asyncHandler(async (req,res)=>{
+
+  const {fullname}= req.body
+
+  if(!fullname){
+    throw new ApiError(400,"Fullname is required")
+  }
+
+  const user = await User.findByIdAndUpdate(req.user?._id,
+    {
+      $set:{fullname:fullname}
+    }
+    ,{new:true})
+    .select("-password")
+
+    return res.status(201)
+    .json(
+      new ApiResponse(201,user,"Account detail updated successfully")
+    )
+});
+
+
+
+const userAvatarUpdate = asyncHandler(async (req,res)=>{
+
+  const avatarLocalPath= req.file?.path
+
+  if(!avatarLocalPath){
+    throw new ApiError(400,"Avatar file is missing")
+  }
+
+  const avatar = await UploadOnCloudinary(avatarLocalPath)
+
+  if(!avatar){
+    throw new ApiError(400,"Error while uploading avatar file")
+  }
+
+  const user=await User.findByIdAndUpdate(
+    req.user?._id,
+    {
+      $set:{avatar:avatar.url}
+    },
+    {new:true}
+  ).select('-password')
+
+  return res.status(201)
+  .json( new ApiResponse(201,user,"Avatar image is updated successfully"))
+});
+
+
+
+
+const userCoverImageUpdate = asyncHandler(async (req,res)=>{
+
+  const coverImageLocalPath= req.file?.path
+
+  if(!coverImageLocalPath){
+    throw new ApiError(400,"coverImage file is missing")
+  }
+
+  const coverimage = await UploadOnCloudinary(coverImageLocalPath)
+
+  if(!coverimage){
+    throw new ApiError(400,"Error while uploading cover image file")
+  }
+
+  const user=await User.findByIdAndUpdate(
+    req.user?._id,
+    {
+      $set:{coverimage:coverimage.url}
+    },
+    {new:true}
+  ).select('-password')
+
+  return res.status(201)
+  .json( new ApiResponse(201,user,"cover image is updated successfully"))
+
+});
+
+
+export {
+  registerUser,
+  loginUser,
+  logoutUser,
+  refreshAcesstoken,
+  getCurrentUser,
+  changeCurrentPassword,
+  accountDetailUpdate,
+  userAvatarUpdate,
+  userCoverImageUpdate
+
+}
