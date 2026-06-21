@@ -1,9 +1,9 @@
 import { Project } from "../models/project.model.js";
-import {ApiError} from "../utils/apierror.js";
-import { UploadOnCloudinary } from "../utils/cloudinary.js";
+import { ApiResponse } from "../utils/ApiResponse.js";
+import { ApiError } from "../utils/ApiError.js";
 
 import { asyncHandler } from "../utils/asyncHandler.js";
-import {ApiResponse} from "../utils/apiresponse.js";
+import { UploadOnCloudinary } from "../utils/cloudinary.js";
 
 //hi
 
